@@ -9,7 +9,7 @@ enum TokenType {
     WHILE,
     OPERATOR,
     ASSIGNMENT,
-    TERMINATOR,
+    EOF,
     LEFTPAREN,
     RIGHTPAREN,
     EQUAL,

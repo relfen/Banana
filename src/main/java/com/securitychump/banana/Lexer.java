@@ -4,9 +4,9 @@ import java.util.ArrayList;
 
 public class Lexer {
     private String input;
-    private int pos = 0;
+    private int position = 0;
     private int line = 0;
-    private int col = 0;
+    private int column = 0;
 
     public Lexer(String input) {
         this.input = input;
@@ -25,12 +25,42 @@ public class Lexer {
     }
 
     public Token nextToken(){
-        if(pos >= input.length()){
+        if(position >= input.length()){
             //TODO: Determine line/column values for EOF marker
             return new Token(TokenType.EOF, "", -1, -1);
         }
 
+        char c = input.charAt(position);
+
+        // Identifiers are currently only allowed to start with a character [a-zA-Z]
+        if(Character.isAlphabetic(c)){
+            return matchIdentifier();
+        }
+
         return null;
+    }
+
+    private Token matchIdentifier() {
+        int pos = this.position;
+        int col = this.column;
+        StringBuilder identifier = new StringBuilder();
+
+        while(pos < input.length()) {
+            char c = input.charAt(pos);
+
+            // After the first character, Identifiers may contain: [a-zA-Z]|[0-9]|[_]
+            if(!(Character.isAlphabetic(c) || Character.isDigit(c) || c == '_')){
+                break;
+            }
+
+            identifier.append(c);
+            pos++;
+        }
+
+        this.position += identifier.length();
+        this.column += identifier.length();
+
+        return new Token(TokenType.ID, identifier.toString(), this.line, col);
     }
 
     //==== Getters/Setters ====//
@@ -43,12 +73,12 @@ public class Lexer {
         this.input = input;
     }
 
-    public int getCol() {
-        return col;
+    public int getColumn() {
+        return column;
     }
 
-    public void setCol(int col) {
-        this.col = col;
+    public void setColumn(int column) {
+        this.column = column;
     }
 
     public int getLine() {
@@ -59,11 +89,11 @@ public class Lexer {
         this.line = line;
     }
 
-    public int getPos() {
-        return pos;
+    public int getPosition() {
+        return position;
     }
 
-    public void setPos(int pos) {
-        this.pos = pos;
+    public void setPosition(int position) {
+        this.position = position;
     }
 }

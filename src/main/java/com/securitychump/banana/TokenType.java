@@ -6,5 +6,20 @@ enum TokenType {
     IF,
     NUMBER,
     STRING,
-    WHILE
+    WHILE,
+    OPERATOR,
+    ASSIGNMENT,
+    TERMINATOR,
+    LEFTPAREN,
+    RIGHTPAREN,
+    EQUAL,
+    GT,
+    GTE,
+    LT,
+    LTE,
+    PLUS,
+    MINUS,
+    MOD,
+    DIV,
+    MULT
 }

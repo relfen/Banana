@@ -1,6 +1,7 @@
 package com.securitychump.banana;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class Lexer {
     private String input;
@@ -12,11 +13,11 @@ public class Lexer {
         this.input = input;
     }
 
-    public ArrayList<Token> tokenize(){
-        ArrayList<Token> tokens = new ArrayList<>();
+    public List<Token> tokenize(){
+        List<Token> tokens = new ArrayList<>();
         Token token = nextToken();
 
-        while(token.getType() == TokenType.EOF){
+        while(token.getType() != TokenType.EOF){
             tokens.add(token);
             token = nextToken();
         }
@@ -26,10 +27,10 @@ public class Lexer {
 
     public Token nextToken(){
         if(position >= input.length()){
-            //TODO: Determine line/column values for EOF marker
-            return new Token(TokenType.EOF, "", -1, -1);
+            return new Token(TokenType.EOF, "", line, column);
         }
 
+        ignoreWhitespace();
         char c = input.charAt(position);
 
         // Identifiers are currently only allowed to start with a character [a-zA-Z]
@@ -37,16 +38,36 @@ public class Lexer {
             return matchIdentifier();
         }
 
-        return null;
+        if(c == '(' || c == ')'){
+            return matchParenthesis();
+        }
+
+        // undefined character classification
+        // Throw an error, since no grammar rules match
+        throw new Error("Undefined character classification for " + c + " at line [" + line + "] and column [" + column + "].");
+    }
+
+    private void ignoreWhitespace() {
+        while(position < input.length() && Character.isWhitespace(input.charAt(position))){
+            position++;
+
+            // Should be good enough for major OS line endings. Nothing we currently care about is using \r, by itself.
+            if(input.charAt(position) == '\n'){
+                line++;
+                column = 0;
+            } else {
+                column++;
+            }
+        }
     }
 
     private Token matchIdentifier() {
-        int pos = this.position;
-        int col = this.column;
+        int position = this.position;
+        int column = this.column;
         StringBuilder identifier = new StringBuilder();
 
-        while(pos < input.length()) {
-            char c = input.charAt(pos);
+        while(position < input.length()) {
+            char c = input.charAt(position);
 
             // After the first character, Identifiers may contain: [a-zA-Z]|[0-9]|[_]
             if(!(Character.isAlphabetic(c) || Character.isDigit(c) || c == '_')){
@@ -54,14 +75,28 @@ public class Lexer {
             }
 
             identifier.append(c);
-            pos++;
+            position++;
         }
 
         this.position += identifier.length();
         this.column += identifier.length();
 
-        return new Token(TokenType.ID, identifier.toString(), this.line, col);
+        return new Token(TokenType.ID, identifier.toString(), this.line, column);
     }
+
+    private Token matchParenthesis(){
+        char c = input.charAt(position++);
+        TokenType tt;
+
+        if(c == '('){
+            tt = TokenType.LEFTPAREN;
+        } else {
+            tt = TokenType.RIGHTPAREN;
+        }
+
+        return new Token(tt, String.valueOf(c), line, column++);
+    }
+
 
     //==== Getters/Setters ====//
 

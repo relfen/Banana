@@ -17,6 +17,13 @@ public class Token {
         return type;
     }
 
+    @Override
+    public String toString(){
+        return "Token Type: " + type.toString() + " Value: " + value + " Line: " + line + " Column: " + column;
+    }
+
+    //==== Getters/Setters ====//
+
     public void setType(TokenType type) {
         this.type = type;
     }

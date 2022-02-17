@@ -25,7 +25,11 @@ public class Lexer {
     private final static String not = "!";
     private final static String pipe = "|";
     private final static String amp = "&";
-    private final static String operators = sign + eq + gt + lt + not + pipe + amp;
+    private final static String asterisk = "*";
+    private final static String slash = "/";
+    private final static String mod = "%";
+
+    private final static String operators = sign + eq + gt + lt + not + pipe + amp + asterisk + slash + mod;
 
     public Lexer(String input) {
         this.input = input;
@@ -51,12 +55,13 @@ public class Lexer {
     }
 
     public Token nextToken(){
-        if(position >= input.length()){
-            return new Token(TokenType.EOF, "", line, column);
-        }
-
         try {
             ignoreWhitespace();
+
+            if(position >= input.length()){
+                return new Token(TokenType.EOF, "", line, column);
+            }
+
             char c = input.charAt(position);
 
             // Identifiers are currently only allowed to start with a character [a-zA-Z]
@@ -117,6 +122,10 @@ public class Lexer {
         transitions.add(new Transition(State.INITIAL, pipe, State.BINOR));   // |
         transitions.add(new Transition(State.INITIAL, plus, State.PLUS));    // +
         transitions.add(new Transition(State.INITIAL, minus, State.MINUS));  // -
+        transitions.add(new Transition(State.INITIAL, asterisk, State.MUL)); // *
+        transitions.add(new Transition(State.INITIAL, slash, State.DIV));    // /
+        transitions.add(new Transition(State.INITIAL, mod, State.MOD));      // %
+
 
         // Second stage operators
         transitions.add(new Transition(State.EQ, eq, State.EQEQ));            // ==
@@ -129,6 +138,10 @@ public class Lexer {
         transitions.add(new Transition(State.MINUS, minus, State.DECREMENT)); // --
         transitions.add(new Transition(State.PLUS, eq, State.PLUSEQ));        // +=
         transitions.add(new Transition(State.MINUS, eq, State.MINUSEQ));      // -=
+        transitions.add(new Transition(State.MOD, eq, State.MODEQ));          // %=
+        transitions.add(new Transition(State.MUL, eq, State.MULEQ));          // *=
+        transitions.add(new Transition(State.MUL, asterisk, State.POW));      // **
+        transitions.add(new Transition(State.DIV, eq, State.DIVEQ));          // /=
 
         return transitions;
     }
@@ -217,8 +230,6 @@ public class Lexer {
 
     private void ignoreWhitespace() {
         while(position < input.length() && Character.isWhitespace(input.charAt(position))){
-            position++;
-
             // Should be good enough for major OS line endings. Nothing we currently care about is using \r, by itself.
             if(input.charAt(position) == '\n'){
                 line++;
@@ -226,6 +237,8 @@ public class Lexer {
             } else {
                 column++;
             }
+
+            position++;
         }
     }
 

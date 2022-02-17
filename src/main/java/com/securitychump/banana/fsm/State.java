@@ -30,7 +30,14 @@ public enum State {
     OR(true),
     BINOR(true),
     AND(true),
-    BINAND(true);
+    BINAND(true),
+    MUL(true),
+    MULEQ(true),
+    DIV(true),
+    DIVEQ(true),
+    MOD(true),
+    POW(true),
+    MODEQ(true);
 
     // Indicate whether a state is accepting, which means it can be the final state, creating the lexeme/token.
     private final boolean accepting;

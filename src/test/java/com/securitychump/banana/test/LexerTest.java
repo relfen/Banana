@@ -41,7 +41,7 @@ public class LexerTest {
 
     @Test
     public void tokenizeOperators(){
-        Lexer lexer = new Lexer(" = == >= <= != += -= ++ --");
+        Lexer lexer = new Lexer(" = == >= <= != += -= ++ -- / /= * *= ** % %= ");
         List<Token> tokens;
 
         tokens = lexer.tokenize();

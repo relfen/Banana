@@ -1,5 +1,9 @@
 package com.securitychump.banana;
 
+import com.securitychump.banana.fsm.Machine;
+import com.securitychump.banana.fsm.State;
+import com.securitychump.banana.fsm.Transition;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -8,6 +12,13 @@ public class Lexer {
     private int position = 0;
     private int line = 0;
     private int column = 0;
+    private final static String digit = "0123456789";
+    private final static String plus = "+";
+    private final static String minus = "-";
+    private final static String sign = plus + minus;
+    private final static String period = ".";
+    private final static String comma = ",";
+    private final static String exp = "eE";
 
     public Lexer(String input) {
         this.input = input;
@@ -17,9 +28,16 @@ public class Lexer {
         List<Token> tokens = new ArrayList<>();
         Token token = nextToken();
 
-        while(token.getType() != TokenType.EOF){
-            tokens.add(token);
-            token = nextToken();
+        // Ignoring null tokens here, so we can continue parsing the file after we hit any errors.
+        while(true){
+            if(token == null) {
+                token = nextToken();
+            } else if(token.getType() != TokenType.EOF) {
+                tokens.add(token);
+                token = nextToken();
+            } else {
+                break;
+            }
         }
 
         return tokens;
@@ -30,21 +48,101 @@ public class Lexer {
             return new Token(TokenType.EOF, "", line, column);
         }
 
-        ignoreWhitespace();
-        char c = input.charAt(position);
+        try {
+            ignoreWhitespace();
+            char c = input.charAt(position);
 
-        // Identifiers are currently only allowed to start with a character [a-zA-Z]
-        if(Character.isAlphabetic(c)){
-            return matchIdentifier();
+            // Identifiers are currently only allowed to start with a character [a-zA-Z]
+            if (Character.isAlphabetic(c)) {
+                return matchIdentifier();
+            }
+
+            if (c == '(' || c == ')') {
+                return matchParenthesis();
+            }
+
+            if (Character.isDigit(c)) {
+                return matchNumber();
+            }
+
+            // undefined character classification
+            // Throw an error, since no grammar rules match
+            throw new Error("Undefined character classification for " + c + " at line [" + line + "] and column [" + column + "].");
+        }
+        catch(Error e) {
+            System.out.println(e.getLocalizedMessage());
         }
 
-        if(c == '(' || c == ')'){
-            return matchParenthesis();
+        return null;
+    }
+
+    private Token matchNumber() {
+        int position = this.position;
+        StringBuilder num = new StringBuilder();
+        List<Transition> transitions = buildNumberTransitions();
+        State next = null;
+        State previous = null;
+        Character c = ' ';
+
+        Machine machine = new Machine(State.INITIAL, transitions);
+        while(position < input.length()){
+            c = input.charAt(position);
+            next = machine.getNextState(c);
+
+            // Valid numeric found. Continue building out the token value
+            if(next != null) {
+                num.append(c);
+                position++;
+                previous = next;
+            } else {
+                break;
+            }
         }
 
-        // undefined character classification
-        // Throw an error, since no grammar rules match
-        throw new Error("Undefined character classification for " + c + " at line [" + line + "] and column [" + column + "].");
+        this.position += num.length();
+        this.column += num.length();
+
+        // We either hit the end of file, or end of token.
+        //TODO: Modify check to support lists or parenthesis. The terminator could be a comma.
+        if(position == input.length() || Character.isWhitespace(input.charAt(position))){
+            if(previous != null && previous.isAccepting()) {
+                return new Token(TokenType.NUMBER, num.toString(), this.line, this.column);
+            }
+        } else {
+            // We hit an invalid character. Update positions for error reporting, below.
+            this.position++;
+            this.column++;
+        }
+
+        // Did not full match the number
+        throw new Error("Tokenizing Error: '" + c + "' is not a number.  At line [" + this.line + "] and column [" + this.column  + "].");
+    }
+
+    private List<Transition> buildNumberTransitions() {
+        List<Transition> transitions = new ArrayList<Transition>();
+
+        // Rules for numbers:
+        // Starts with digit [0-9]
+        //TODO: Add support for negative numbers
+        transitions.add(new Transition(State.INITIAL, digit, State.INTEGER));
+
+        // Still an INT
+        transitions.add(new Transition(State.INTEGER, digit, State.INTEGER));
+
+        // Decimal point found
+        transitions.add(new Transition(State.INTEGER, period, State.MANTISSA));
+        transitions.add(new Transition(State.MANTISSA, digit, State.FRACTIONALNUMBER));
+        transitions.add(new Transition(State.FRACTIONALNUMBER, digit, State.FRACTIONALNUMBER));
+        transitions.add(new Transition(State.FRACTIONALNUMBER, exp, State.NUMBERWITHPARTIALEXPONENT));
+
+        // Exponent found
+        transitions.add(new Transition(State.INTEGER, exp, State.NUMBERWITHPARTIALEXPONENT));
+        transitions.add(new Transition(State.NUMBERWITHPARTIALEXPONENT, digit, State.NUMBERWITHEXPONENT));
+        transitions.add(new Transition(State.NUMBERWITHPARTIALEXPONENT, sign, State.NUMBERWITHPARTIALSIGNEDEXPONENT));
+        transitions.add(new Transition(State.NUMBERWITHPARTIALSIGNEDEXPONENT, digit, State.NUMBERWITHEXPONENT));
+        transitions.add(new Transition(State.NUMBERWITHEXPONENT, digit, State.NUMBERWITHEXPONENT));
+
+        return transitions;
     }
 
     private void ignoreWhitespace() {
@@ -94,7 +192,8 @@ public class Lexer {
             tt = TokenType.RIGHTPAREN;
         }
 
-        return new Token(tt, String.valueOf(c), line, column++);
+        column++;
+        return new Token(tt, String.valueOf(c), line, column);
     }
 
 

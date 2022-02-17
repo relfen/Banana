@@ -35,7 +35,17 @@ public class LexerTest {
         List<Token> tokens;
 
         tokens = lexer.tokenize();
-        System.out.println("\nTokens: ");
+        System.out.println("\nNumeric Tokens: ");
+        tokens.forEach((t) -> System.out.println(t));
+    }
+
+    @Test
+    public void tokenizeOperators(){
+        Lexer lexer = new Lexer(" = == >= <= != += -= ++ --");
+        List<Token> tokens;
+
+        tokens = lexer.tokenize();
+        System.out.println("\nOperator Tokens: ");
         tokens.forEach((t) -> System.out.println(t));
     }
 }

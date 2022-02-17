@@ -19,6 +19,13 @@ public class Lexer {
     private final static String period = ".";
     private final static String comma = ",";
     private final static String exp = "eE";
+    private final static String eq = "=";
+    private final static String gt = ">";
+    private final static String lt = "<";
+    private final static String not = "!";
+    private final static String pipe = "|";
+    private final static String amp = "&";
+    private final static String operators = sign + eq + gt + lt + not + pipe + amp;
 
     public Lexer(String input) {
         this.input = input;
@@ -65,8 +72,14 @@ public class Lexer {
                 return matchNumber();
             }
 
+            if(operators.contains(String.valueOf(c))){
+                return matchOperator();
+            }
+
             // undefined character classification
             // Throw an error, since no grammar rules match
+            position++;
+            column++;
             throw new Error("Undefined character classification for " + c + " at line [" + line + "] and column [" + column + "].");
         }
         catch(Error e) {
@@ -76,50 +89,67 @@ public class Lexer {
         return null;
     }
 
+    private Token matchOperator() {
+        List<Transition> transitions = buildOperatorTransitions();
+        Token token = matchToken(TokenType.OPERATOR, transitions);
+
+        if(token == null){
+            // Get the offending character
+            Character c = this.input.charAt(this.column-1);
+
+            // Did not fully match the number
+            throw new Error("Tokenizing Error: '" + c + "' is not valid for this operator.  At line [" + this.line + "] and column [" + this.column  + "].");
+        }
+
+        return token;
+    }
+
+    private List<Transition> buildOperatorTransitions() {
+        List<Transition> transitions = new ArrayList<>();
+
+        // Rules for operators:
+        // Each operator from operators string need to be represented in first stage
+        transitions.add(new Transition(State.INITIAL, eq, State.EQ));        // =
+        transitions.add(new Transition(State.INITIAL, not, State.NOT));      // !
+        transitions.add(new Transition(State.INITIAL, lt, State.LT));        // <
+        transitions.add(new Transition(State.INITIAL, gt, State.GT));        // >
+        transitions.add(new Transition(State.INITIAL, amp, State.BINAND));   // &
+        transitions.add(new Transition(State.INITIAL, pipe, State.BINOR));   // |
+        transitions.add(new Transition(State.INITIAL, plus, State.PLUS));    // +
+        transitions.add(new Transition(State.INITIAL, minus, State.MINUS));  // -
+
+        // Second stage operators
+        transitions.add(new Transition(State.EQ, eq, State.EQEQ));            // ==
+        transitions.add(new Transition(State.NOT, eq, State.NOTEQ));          // !=
+        transitions.add(new Transition(State.LT, eq, State.LTE));             // <=
+        transitions.add(new Transition(State.GT, eq, State.GTE));             // >=
+        transitions.add(new Transition(State.BINAND, amp, State.AND));        // &&
+        transitions.add(new Transition(State.BINOR, pipe, State.OR));         // ||
+        transitions.add(new Transition(State.PLUS, plus, State.INCREMENT));   // ++
+        transitions.add(new Transition(State.MINUS, minus, State.DECREMENT)); // --
+        transitions.add(new Transition(State.PLUS, eq, State.PLUSEQ));        // +=
+        transitions.add(new Transition(State.MINUS, eq, State.MINUSEQ));      // -=
+
+        return transitions;
+    }
+
     private Token matchNumber() {
-        int position = this.position;
-        StringBuilder num = new StringBuilder();
         List<Transition> transitions = buildNumberTransitions();
-        State next = null;
-        State previous = null;
-        Character c = ' ';
+        Token token = matchToken(TokenType.NUMBER, transitions);
 
-        Machine machine = new Machine(State.INITIAL, transitions);
-        while(position < input.length()){
-            c = input.charAt(position);
-            next = machine.getNextState(c);
+        if(token == null){
+            // Get the offending character
+            Character c = this.input.charAt(this.column-1);
 
-            // Valid numeric found. Continue building out the token value
-            if(next != null) {
-                num.append(c);
-                position++;
-                previous = next;
-            } else {
-                break;
-            }
+            // Did not fully match the number
+            throw new Error("Tokenizing Error: '" + c + "' is not a number.  At line [" + this.line + "] and column [" + this.column  + "].");
         }
 
-        this.position += num.length();
-        this.column += num.length();
-
-        // We either hit the end of file, or end of token.
-        //TODO: Modify check to support lists or parenthesis. The terminator could be a comma.
-        if(position == input.length() || Character.isWhitespace(input.charAt(position))){
-            if(previous != null && previous.isAccepting()) {
-                return new Token(TokenType.NUMBER, num.toString(), this.line, this.column);
-            }
-        } else {
-            // We hit an invalid character. Update positions for error reporting, below.
-            this.position++;
-            this.column++;
-        }
-
-        // Did not full match the number
-        throw new Error("Tokenizing Error: '" + c + "' is not a number.  At line [" + this.line + "] and column [" + this.column  + "].");
+        return token;
     }
 
     private List<Transition> buildNumberTransitions() {
-        List<Transition> transitions = new ArrayList<Transition>();
+        List<Transition> transitions = new ArrayList<>();
 
         // Rules for numbers:
         // Starts with digit [0-9]
@@ -143,6 +173,46 @@ public class Lexer {
         transitions.add(new Transition(State.NUMBERWITHEXPONENT, digit, State.NUMBERWITHEXPONENT));
 
         return transitions;
+    }
+
+    private Token matchToken(TokenType type, List<Transition> transitions){
+        int position = this.position;
+        StringBuilder token = new StringBuilder();
+        State next = null;
+        State previous = null;
+        Character c = ' ';
+
+        Machine machine = new Machine(State.INITIAL, transitions);
+        while(position < input.length()){
+            c = input.charAt(position);
+            next = machine.getNextState(c);
+
+            // Valid numeric found. Continue building out the token value
+            if(next != null) {
+                token.append(c);
+                position++;
+                previous = next;
+            } else {
+                break;
+            }
+        }
+
+        this.position += token.length();
+        this.column += token.length();
+
+        // We either hit the end of file, or end of token.
+        //TODO: Modify check to support lists or parenthesis. The terminator could be a comma.
+        if(position == input.length() || Character.isWhitespace(input.charAt(position))){
+            if(previous != null && previous.isAccepting()) {
+                return new Token(type, token.toString(), this.line, this.column);
+            }
+        } else {
+            // We hit an invalid character. Update positions for error reporting, below.
+            this.position++;
+            this.column++;
+        }
+
+        return null;
     }
 
     private void ignoreWhitespace() {

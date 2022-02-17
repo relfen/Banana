@@ -10,7 +10,27 @@ public enum State {
     NUMBERWITHEXPONENT(true),
     NUMBERWITHPARTIALSIGNEDEXPONENT(false),
     MANTISSA(false),
-    EOT(true);
+    EOT(true),
+
+    // Operators
+    PLUS(true),
+    INCREMENT(true),
+    DECREMENT(true),
+    MINUS(true),
+    EQ(true),
+    EQEQ(true),
+    PLUSEQ(true),
+    MINUSEQ(true),
+    GT(true),
+    GTE(true),
+    LT(true),
+    LTE(true),
+    NOT(true),
+    NOTEQ(true),
+    OR(true),
+    BINOR(true),
+    AND(true),
+    BINAND(true);
 
     // Indicate whether a state is accepting, which means it can be the final state, creating the lexeme/token.
     private final boolean accepting;

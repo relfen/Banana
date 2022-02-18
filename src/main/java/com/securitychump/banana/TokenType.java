@@ -1,6 +1,6 @@
 package com.securitychump.banana;
 
-enum TokenType {
+public enum TokenType {
     ID,
     NUMBER,
     OPERATOR,

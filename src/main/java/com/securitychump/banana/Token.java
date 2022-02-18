@@ -1,5 +1,7 @@
 package com.securitychump.banana;
 
+import java.util.Objects;
+
 public class Token {
     private TokenType type;
     private String value;
@@ -22,10 +24,33 @@ public class Token {
         return "Token Type: " + type.toString() + " Value: " + value + " Line: " + line + " Column: " + column;
     }
 
-    //==== Getters/Setters ====//
+    @Override
+    public boolean equals(Object object){
+        if(object != null && object instanceof Token){
+            Token t = (Token)object;
+            if(t.getTokenType() == this.type &&
+                    t.getColumn() == this.column &&
+                    t.getLine() == this.line &&
+                    (t.getValue() != null && t.getValue().equals(this.value))){
+                return true;
+            }
+        }
+        return false;
+    }
 
-    public void setType(TokenType type) {
+    @Override
+    public int hashCode() {
+        return Objects.hash(type, value, line, column);
+    }
+
+//==== Getters/Setters ====//
+
+    public void setTokenType(TokenType type) {
         this.type = type;
+    }
+
+    public TokenType getTokenType() {
+        return this.type;
     }
 
     public String getValue() {

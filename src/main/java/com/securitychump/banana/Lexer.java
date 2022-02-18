@@ -10,7 +10,7 @@ import java.util.List;
 public class Lexer {
     private String input;
     private int position = 0;
-    private int line = 0;
+    private int line = 1;
     private int column = 0;
     private final static String digit = "0123456789";
     private final static String plus = "+";

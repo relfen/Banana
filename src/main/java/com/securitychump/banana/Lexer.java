@@ -5,6 +5,7 @@ import com.securitychump.banana.fsm.State;
 import com.securitychump.banana.fsm.Transition;
 
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 
 public class Lexer {
@@ -12,12 +13,12 @@ public class Lexer {
     private int position = 0;
     private int line = 1;
     private int column = 0;
+    //TODO: May decide to drive these values from the TokenType values, instead.
     private final static String digit = "0123456789";
     private final static String plus = "+";
     private final static String minus = "-";
     private final static String sign = plus + minus;
     private final static String period = ".";
-    private final static String comma = ",";
     private final static String exp = "eE";
     private final static String eq = "=";
     private final static String gt = ">";
@@ -28,8 +29,16 @@ public class Lexer {
     private final static String asterisk = "*";
     private final static String slash = "/";
     private final static String mod = "%";
-
     private final static String operators = sign + eq + gt + lt + not + pipe + amp + asterisk + slash + mod;
+    private final static String lparen = "(";
+    private final static String rparen = ")";
+    private final static String lbracket = "[";
+    private final static String rbracket = "]";
+    private final static String lbrace = "{";
+    private final static String rbrace = "}";
+    private final static String semicolon = ";";
+    private final static String comma = ",";
+    private final static String delimiters = lparen + rparen + lbracket + rbracket + lbrace + rbrace + semicolon + comma;
 
     public Lexer(String input) {
         this.input = input;
@@ -64,19 +73,22 @@ public class Lexer {
 
             char c = input.charAt(position);
 
-            // Identifiers are currently only allowed to start with a character [a-zA-Z]
+            // Identifiers: Currently only allowed to start with a character [a-zA-Z]
             if (Character.isAlphabetic(c)) {
                 return matchIdentifier();
             }
 
-            if (c == '(' || c == ')') {
-                return matchParenthesis();
+            // Delimiters
+            if(delimiters.contains(String.valueOf(c))){
+                return matchDelimiter();
             }
 
+            // Numbers
             if (Character.isDigit(c)) {
                 return matchNumber();
             }
 
+            // Operators
             if(operators.contains(String.valueOf(c))){
                 return matchOperator();
             }
@@ -96,7 +108,30 @@ public class Lexer {
 
     private Token matchOperator() {
         List<Transition> transitions = buildOperatorTransitions();
-        Token token = matchToken(TokenType.OPERATOR, transitions);
+        EnumSet<TokenType> tokenTypes = EnumSet.of(TokenType.EQ,
+                TokenType.EQEQ,
+                TokenType.GT,
+                TokenType.GTE,
+                TokenType.RSHIFT,
+                TokenType.LT,
+                TokenType.LTE,
+                TokenType.LSHIFT,
+                TokenType.PLUS,
+                TokenType.INCREMENT,
+                TokenType.MINUS,
+                TokenType.DECREMENT,
+                TokenType.MOD,
+                TokenType.MODEQ,
+                TokenType.DIV,
+                TokenType.DIVEQ,
+                TokenType.MULT,
+                TokenType.POW,
+                TokenType.NOT,
+                TokenType.NOTEQ,
+                TokenType.PLUSEQ,
+                TokenType.MINUSEQ,
+                TokenType.MULTEQ);
+        Token token = matchToken(tokenTypes, transitions);
 
         if(token == null){
             // Get the offending character
@@ -107,6 +142,49 @@ public class Lexer {
         }
 
         return token;
+    }
+
+    private Token matchDelimiter(){
+
+        List<Transition> transitions = buildDelimiterTransitions();
+        EnumSet<TokenType> tokenTypes = EnumSet.of(TokenType.LPAREN,
+                TokenType.RPAREN,
+                TokenType.LBRACE,
+                TokenType.RBRACE,
+                TokenType.LBRACKET,
+                TokenType.RBRACKET,
+                TokenType.COMMA,
+                TokenType.SEMICOLON,
+                TokenType.DOT);
+        Token token = matchToken(tokenTypes, transitions);
+
+        if(token == null){
+            // Get the offending character
+            Character c = this.input.charAt(this.column-1);
+
+            // Did not fully match the delimiter
+            throw new Error("Tokenizing Error: '" + c + "' is not valid for this operator.  At line [" + this.line + "] and column [" + this.column  + "].");
+        }
+
+        return token;
+    }
+
+    private List<Transition> buildDelimiterTransitions() {
+        List<Transition> transitions = new ArrayList<>();
+
+        // Rules for delimiters:
+        // Only 1 stage for all delimiters!
+        transitions.add(new Transition(State.INITIAL, lbracket, State.LBRACKET));   // [
+        transitions.add(new Transition(State.INITIAL, rbracket, State.RBRACKET));   // ]
+        transitions.add(new Transition(State.INITIAL, lbrace, State.LBRACE));       // {
+        transitions.add(new Transition(State.INITIAL, rbrace, State.RBRACE));       // }
+        transitions.add(new Transition(State.INITIAL, lparen, State.LPAREN));       // (
+        transitions.add(new Transition(State.INITIAL, rparen, State.RPAREN));       // )
+        transitions.add(new Transition(State.INITIAL, comma, State.COMMA));         // ,
+        transitions.add(new Transition(State.INITIAL, semicolon, State.SEMICOLON)); // ;
+        transitions.add(new Transition(State.INITIAL, period, State.DOT));          // .
+
+        return transitions;
     }
 
     private List<Transition> buildOperatorTransitions() {
@@ -126,12 +204,14 @@ public class Lexer {
         transitions.add(new Transition(State.INITIAL, slash, State.DIV));    // /
         transitions.add(new Transition(State.INITIAL, mod, State.MOD));      // %
 
-
         // Second stage operators
         transitions.add(new Transition(State.EQ, eq, State.EQEQ));            // ==
         transitions.add(new Transition(State.NOT, eq, State.NOTEQ));          // !=
         transitions.add(new Transition(State.LT, eq, State.LTE));             // <=
+        transitions.add(new Transition(State.LT, lt, State.LSHIFT));          // <<
+        transitions.add(new Transition(State.LT, eq, State.LTE));             // <=
         transitions.add(new Transition(State.GT, eq, State.GTE));             // >=
+        transitions.add(new Transition(State.GT, gt, State.RSHIFT));          // >>
         transitions.add(new Transition(State.BINAND, amp, State.AND));        // &&
         transitions.add(new Transition(State.BINOR, pipe, State.OR));         // ||
         transitions.add(new Transition(State.PLUS, plus, State.INCREMENT));   // ++
@@ -188,7 +268,15 @@ public class Lexer {
         return transitions;
     }
 
-    private Token matchToken(TokenType type, List<Transition> transitions){
+    private Token matchToken(TokenType tokenType, List<Transition> transitions){
+        return matchToken(null, tokenType, transitions);
+    }
+
+    private Token matchToken(EnumSet<TokenType> tokenTypes, List<Transition> transitions){
+        return matchToken(tokenTypes, null, transitions);
+    }
+
+    private Token matchToken(EnumSet<TokenType> tokenTypes, TokenType defaultTokenType, List<Transition> transitions){
         int position = this.position;
         StringBuilder token = new StringBuilder();
         State next = null;
@@ -215,10 +303,12 @@ public class Lexer {
 
         // We either hit the end of file, or end of token.
         //TODO: Modify check to support lists or parenthesis. The terminator could be a comma.
-        if(position == input.length() || Character.isWhitespace(input.charAt(position))){
-            if(previous != null && previous.isAccepting()) {
-                return new Token(type, token.toString(), this.line, this.column);
-            }
+        if(previous != null && previous.isAccepting()){
+            // Find the proper token type
+            String fullToken = token.toString();
+            TokenType matchTokentype = defaultTokenType != null ? defaultTokenType : getMatchTokenType(tokenTypes, fullToken);
+
+            return new Token(matchTokentype, fullToken, this.line, this.column);
         } else {
             // We hit an invalid character. Update positions for error reporting, below.
             this.position++;
@@ -226,6 +316,19 @@ public class Lexer {
         }
 
         return null;
+    }
+
+    private TokenType getMatchTokenType(EnumSet<TokenType> tokenTypes, String fullToken) {
+        if(tokenTypes != null) {
+            for (TokenType t : tokenTypes) {
+                if (t.getValue().equalsIgnoreCase(fullToken)) {
+                    return t;
+                }
+            }
+        }
+
+        // Using a default so we can avoid having to do complex matching for numbers, strings, and identifiers.
+        return TokenType.BADTOKEN;
     }
 
     private void ignoreWhitespace() {
@@ -264,21 +367,6 @@ public class Lexer {
 
         return new Token(TokenType.ID, identifier.toString(), this.line, column);
     }
-
-    private Token matchParenthesis(){
-        char c = input.charAt(position++);
-        TokenType tt;
-
-        if(c == '('){
-            tt = TokenType.LEFTPAREN;
-        } else {
-            tt = TokenType.RIGHTPAREN;
-        }
-
-        column++;
-        return new Token(tt, String.valueOf(c), line, column);
-    }
-
 
     //==== Getters/Setters ====//
 

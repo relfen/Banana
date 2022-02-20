@@ -12,6 +12,17 @@ public enum State {
     MANTISSA(false),
     EOT(true),
 
+    // Delimiters
+    LBRACKET(true),
+    RBRACKET(true),
+    LBRACE(true),
+    RBRACE(true),
+    SEMICOLON(true),
+    COMMA(true),
+    LPAREN(true),
+    RPAREN(true),
+    DOT(true),
+
     // Operators
     PLUS(true),
     INCREMENT(true),
@@ -23,8 +34,10 @@ public enum State {
     MINUSEQ(true),
     GT(true),
     GTE(true),
+    RSHIFT(true),
     LT(true),
     LTE(true),
+    LSHIFT(true),
     NOT(true),
     NOTEQ(true),
     OR(true),

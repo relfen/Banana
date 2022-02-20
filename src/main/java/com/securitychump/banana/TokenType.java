@@ -1,11 +1,31 @@
 package com.securitychump.banana;
 
 public enum TokenType {
-    ID,
+    // Generic
+    IDENTIFIER,
     NUMBER,
     OPERATOR,
     EOF,
-    BADTOKEN,
+    UNKNOWN,
+
+    // Researched keywords/Identifiers
+    IF("if"),
+    ELSE("else"),
+    WHILE("while"),
+    FOR("for"),
+    CLASS("class"),
+    PUBLIC("public"),
+    PRIVATE("private"),
+    FUNC("func"),
+    RETURN("return"),
+    BREAK("break"),
+    NEXT("next"),
+    TRUE("true"),
+    FALSE("false"),
+    NULL("null"),
+    THIS("this"),
+
+    // Delimiters
     LPAREN("("),
     RPAREN(")"),
     LBRACE("{"),
@@ -15,6 +35,8 @@ public enum TokenType {
     COMMA(","),
     SEMICOLON(";"),
     DOT("."),
+
+    // Operators
     NOT("!"),
     NOTEQ("!="),
     EQ("="),

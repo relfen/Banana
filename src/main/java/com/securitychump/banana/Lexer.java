@@ -108,7 +108,8 @@ public class Lexer {
 
     private Token matchOperator() {
         List<Transition> transitions = buildOperatorTransitions();
-        EnumSet<TokenType> tokenTypes = EnumSet.of(TokenType.EQ,
+        EnumSet<TokenType> tokenTypes = EnumSet.of(
+                TokenType.EQ,
                 TokenType.EQEQ,
                 TokenType.GT,
                 TokenType.GTE,
@@ -147,7 +148,8 @@ public class Lexer {
     private Token matchDelimiter(){
 
         List<Transition> transitions = buildDelimiterTransitions();
-        EnumSet<TokenType> tokenTypes = EnumSet.of(TokenType.LPAREN,
+        EnumSet<TokenType> tokenTypes = EnumSet.of(
+                TokenType.LPAREN,
                 TokenType.RPAREN,
                 TokenType.LBRACE,
                 TokenType.RBRACE,
@@ -281,7 +283,7 @@ public class Lexer {
         StringBuilder token = new StringBuilder();
         State next = null;
         State previous = null;
-        Character c = ' ';
+        Character c;
 
         Machine machine = new Machine(State.INITIAL, transitions);
         while(position < input.length()){
@@ -302,7 +304,6 @@ public class Lexer {
         this.column += token.length();
 
         // We either hit the end of file, or end of token.
-        //TODO: Modify check to support lists or parenthesis. The terminator could be a comma.
         if(previous != null && previous.isAccepting()){
             // Find the proper token type
             String fullToken = token.toString();
@@ -327,8 +328,8 @@ public class Lexer {
             }
         }
 
-        // Using a default so we can avoid having to do complex matching for numbers, strings, and identifiers.
-        return TokenType.BADTOKEN;
+        // Using a default, so we can avoid having to do complex matching for numbers, strings, and identifiers.
+        return TokenType.UNKNOWN;
     }
 
     private void ignoreWhitespace() {
@@ -346,6 +347,7 @@ public class Lexer {
     }
 
     private Token matchIdentifier() {
+        //TODO: Change this over to use the State machine, so the code is at least consistent across all token matching
         int position = this.position;
         int column = this.column;
         StringBuilder identifier = new StringBuilder();
@@ -365,7 +367,33 @@ public class Lexer {
         this.position += identifier.length();
         this.column += identifier.length();
 
-        return new Token(TokenType.ID, identifier.toString(), this.line, column);
+        String fullToken = identifier.toString();
+        TokenType tokenType = matchKeywordTokenType(fullToken);
+        // Check to see if the results match one of the reserved keywords and update the token accordingly
+        tokenType = (tokenType != TokenType.UNKNOWN) ? tokenType : TokenType.IDENTIFIER;
+
+        return new Token(tokenType, fullToken, this.line, column);
+    }
+
+    private TokenType matchKeywordTokenType(String fullToken) {
+        EnumSet<TokenType> tokenTypes = EnumSet.of(
+                TokenType.IF,
+                TokenType.ELSE,
+                TokenType.WHILE,
+                TokenType.FOR,
+                TokenType.CLASS,
+                TokenType.PUBLIC,
+                TokenType.PRIVATE,
+                TokenType.FUNC,
+                TokenType.RETURN,
+                TokenType.BREAK,
+                TokenType.NEXT,
+                TokenType.TRUE,
+                TokenType.FALSE,
+                TokenType.NULL,
+                TokenType.THIS);
+
+        return getMatchTokenType(tokenTypes, fullToken);
     }
 
     //==== Getters/Setters ====//

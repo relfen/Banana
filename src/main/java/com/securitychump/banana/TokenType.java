@@ -4,8 +4,8 @@ public enum TokenType {
     // Generic
     IDENTIFIER,
     NUMBER,
-    OPERATOR,
     EOF,
+    EOL,
     UNKNOWN,
 
     // Researched keywords/Identifiers

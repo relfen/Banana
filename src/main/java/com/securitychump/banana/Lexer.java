@@ -29,7 +29,7 @@ public class Lexer {
     private final static String asterisk = "*";
     private final static String slash = "/";
     private final static String mod = "%";
-    private final static String operators = sign + eq + gt + lt + not + pipe + amp + asterisk + slash + mod;
+    private final static String operators = sign + eq + gt + lt + not + pipe + amp + asterisk + slash + mod + period;
     private final static String lparen = "(";
     private final static String rparen = ")";
     private final static String lbracket = "[";
@@ -65,7 +65,12 @@ public class Lexer {
 
     public Token nextToken(){
         try {
-            ignoreWhitespace();
+
+            // statements and assignments will be terminated with a newline
+            Token token = ignoreWhitespace();
+            if(token != null){
+                return token;
+            }
 
             if(position >= input.length()){
                 return new Token(TokenType.EOF, "", line, column);
@@ -131,7 +136,8 @@ public class Lexer {
                 TokenType.NOTEQ,
                 TokenType.PLUSEQ,
                 TokenType.MINUSEQ,
-                TokenType.MULTEQ);
+                TokenType.MULTEQ,
+                TokenType.DOT);
         Token token = matchToken(tokenTypes, transitions);
 
         if(token == null){
@@ -156,8 +162,7 @@ public class Lexer {
                 TokenType.LBRACKET,
                 TokenType.RBRACKET,
                 TokenType.COMMA,
-                TokenType.SEMICOLON,
-                TokenType.DOT);
+                TokenType.SEMICOLON);
         Token token = matchToken(tokenTypes, transitions);
 
         if(token == null){
@@ -165,7 +170,7 @@ public class Lexer {
             Character c = this.input.charAt(this.column-1);
 
             // Did not fully match the delimiter
-            throw new Error("Tokenizing Error: '" + c + "' is not valid for this operator.  At line [" + this.line + "] and column [" + this.column  + "].");
+            throw new Error("Tokenizing Error: '" + c + "' is not a valid delimiter.  At line [" + this.line + "] and column [" + this.column  + "].");
         }
 
         return token;
@@ -184,7 +189,6 @@ public class Lexer {
         transitions.add(new Transition(State.INITIAL, rparen, State.RPAREN));       // )
         transitions.add(new Transition(State.INITIAL, comma, State.COMMA));         // ,
         transitions.add(new Transition(State.INITIAL, semicolon, State.SEMICOLON)); // ;
-        transitions.add(new Transition(State.INITIAL, period, State.DOT));          // .
 
         return transitions;
     }
@@ -205,6 +209,7 @@ public class Lexer {
         transitions.add(new Transition(State.INITIAL, asterisk, State.MUL)); // *
         transitions.add(new Transition(State.INITIAL, slash, State.DIV));    // /
         transitions.add(new Transition(State.INITIAL, mod, State.MOD));      // %
+        transitions.add(new Transition(State.INITIAL, period, State.DOT));   // .
 
         // Second stage operators
         transitions.add(new Transition(State.EQ, eq, State.EQEQ));            // ==
@@ -332,11 +337,18 @@ public class Lexer {
         return TokenType.UNKNOWN;
     }
 
-    private void ignoreWhitespace() {
+    private Token ignoreWhitespace() {
+        Token token = null;
         while(position < input.length() && Character.isWhitespace(input.charAt(position))){
             // Should be good enough for major OS line endings. Nothing we currently care about is using \r, by itself.
             if(input.charAt(position) == '\n'){
                 line++;
+
+                // Return a EOL token so the caller can identify a terminated expression
+                if(token == null){
+                    token = new Token(TokenType.EOL, "", line, column);
+                }
+
                 column = 0;
             } else {
                 column++;
@@ -344,6 +356,8 @@ public class Lexer {
 
             position++;
         }
+
+        return token;
     }
 
     private Token matchIdentifier() {
